@@ -1,0 +1,28 @@
+[package]
+name = "chashi"
+version = "1.2.0"
+description = "Ночная чайная — таймер проливов для гунфу ча"
+authors = ["Ernomoon"]
+license = "MIT"
+repository = "https://github.com/Ernomoon/Chashi"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-single-instance = "2"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

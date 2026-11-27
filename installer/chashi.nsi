@@ -42,7 +42,7 @@ VIAddVersionKey /LANG=1049 "ProductVersion" "${VERSION}"
 !define MUI_ABORTWARNING_TEXT "Прервать установку Ночной чайной?"
 
 !define MUI_WELCOMEPAGE_TITLE "Добро пожаловать в Ночную чайную"
-!define MUI_WELCOMEPAGE_TEXT "Тихий таймер проливов для гунфу ча: фонарь наполняется светом, в окнах деревни горит огонь, а по небу пролетает дракон.$\r$\n$\r$\nПриложение весит пару мегабайт, работает без интернета и ставится без прав администратора.$\r$\n$\r$\nСоздатель — Ernomoon.$\r$\n$\r$\nНажми «Далее», чтобы продолжить."
+!define MUI_WELCOMEPAGE_TEXT "Тихий таймер проливов для гунфу ча: фонарь наполняется светом, в окнах деревни горит огонь, а по небу пролетает дракон.$\r$\n$\r$\nЛёгкое приложение на Rust: весит пару мегабайт, работает без интернета и ставится без прав администратора.$\r$\n$\r$\nСоздатель — Ernomoon.$\r$\n$\r$\nНажми «Далее», чтобы продолжить."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "..\build\license_ru.txt"
 !insertmacro MUI_PAGE_DIRECTORY
@@ -76,6 +76,13 @@ Section "Install"
   ; Если приложение открыто (например, при обновлении) — закрываем его
   nsExec::Exec 'taskkill /F /IM "${EXENAME}"'
   Sleep 400
+  ; Переезд со старых версий: 1.0 (Electron) удаляем её же деинсталлятором, следы 1.1 (Neutralino) — вручную
+  IfFileExists "$INSTDIR\Uninstall Chashi.exe" 0 +4
+    ExecWait '"$INSTDIR\Uninstall Chashi.exe" /S _?=$INSTDIR'
+    Delete "$INSTDIR\Uninstall Chashi.exe"
+    Sleep 300
+  RMDir /r "$INSTDIR\.storage"
+  RMDir /r "$INSTDIR\.tmp"
   SetOutPath "$INSTDIR"
   File "..\dist\${EXENAME}"
   File "..\build\icon.ico"
@@ -93,7 +100,7 @@ Section "Install"
   WriteRegStr HKCU "${REGKEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegDWORD HKCU "${REGKEY}" "NoModify" 1
   WriteRegDWORD HKCU "${REGKEY}" "NoRepair" 1
-  WriteRegDWORD HKCU "${REGKEY}" "EstimatedSize" 3500
+  WriteRegDWORD HKCU "${REGKEY}" "EstimatedSize" 4500
 SectionEnd
 
 Section "Uninstall"
@@ -104,11 +111,9 @@ Section "Uninstall"
   Delete "$INSTDIR\${EXENAME}"
   Delete "$INSTDIR\icon.ico"
   Delete "$INSTDIR\Uninstall.exe"
-  RMDir /r "$INSTDIR\.storage"
-  RMDir /r "$INSTDIR\.tmp"
-  RMDir /r "$INSTDIR\Chashi.exe.WebView2"
-  RMDir /r "$INSTDIR\EBWebView"
   RMDir "$INSTDIR"
+  ; данные окна WebView2 и настройки
+  RMDir /r "$LOCALAPPDATA\com.ernomoon.chashi"
   DeleteRegKey HKCU "${REGKEY}"
   DeleteRegKey HKCU "Software\Chashi"
 SectionEnd

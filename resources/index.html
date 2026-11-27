@@ -27,6 +27,21 @@ body.desk .deskonly{display:revert!important}
 #vig:after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 150px rgba(var(--rgb),.26);opacity:0;transition:opacity .8s}
 #vig.hot:after{opacity:1}
 
+/* ---------- window frame (desktop) ---------- */
+.tbar{display:none}
+body.desk .tbar{display:flex;position:fixed;top:0;left:0;right:0;height:32px;z-index:70;align-items:center;gap:9px;padding-left:12px;background:linear-gradient(rgba(3,4,14,.82),rgba(3,4,14,.5));border-bottom:1px solid rgba(230,197,135,.08);-webkit-user-select:none;user-select:none}
+.tlogo{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font:12px/1 var(--fz);color:var(--ink);background:linear-gradient(140deg,var(--a2),var(--a));pointer-events:none}
+.ttl{font-size:11.5px;letter-spacing:.08em;color:var(--mut);pointer-events:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tsp{flex:1;align-self:stretch}
+.tb{width:46px;height:32px;display:grid;place-items:center;color:var(--mut);transition:background .15s,color .15s}
+.tb svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.1}
+.tb:hover{background:rgba(255,255,255,.08);color:#fff}
+.tb.close:hover{background:#c42b1c;color:#fff}
+body.desk #app,body.desk #intro{top:32px}
+body.desk .drawer{top:32px}
+body.desk .modal{top:32px}
+body.desk #scene{top:0}
+
 /* ---------- intro ---------- */
 #intro{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(6px,1.4vh,14px);pointer-events:none;transition:opacity 1s,transform 1.1s cubic-bezier(.4,0,.2,1);padding-bottom:30px}
 #intro>*{pointer-events:auto}
@@ -321,6 +336,7 @@ body.mini .pill{padding-right:10px}body.mini .pill b{display:none}
 </style>
 </head>
 <body>
+<div class="tbar" id="tbar" data-tauri-drag-region><span class="tlogo">茶</span><span class="ttl" id="ttl">Ночная чайная</span><span class="tsp" data-tauri-drag-region></span><button class="tb" id="tbMin" aria-label="Свернуть" title="Свернуть"><svg viewBox="0 0 12 12"><path d="M2 6.5h8"/></svg></button><button class="tb" id="tbMax" aria-label="Развернуть" title="Развернуть"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1"/></svg></button><button class="tb close" id="tbClose" aria-label="Закрыть" title="Закрыть"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button></div>
 <canvas id="scene"></canvas>
 <div id="vig"></div>
 
@@ -449,22 +465,21 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rnd=(a,b)=>a+Math.random()*(b-a);
 function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-const TITLE='茶时 · Ночная чайная',VERSION='1.1.0',TG='https://t.me/Ernomoon',REPO='Ernomoon/Chashi';
+const TITLE='茶时 · Ночная чайная',VERSION='1.2.0',TG='https://t.me/Ernomoon',REPO='Ernomoon/Chashi';
 let DESK=false;
 
 /* ================= STORAGE ================= */
-// В браузере — localStorage. В приложении — хранилище Neutralino (порт сервера меняется, localStorage бы терялся).
 const store={
  get(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}},
- set(k,v){const s=JSON.stringify(v);try{localStorage.setItem(k,s)}catch(e){}if(DESK){clearTimeout(store['t'+k]);store['t'+k]=setTimeout(()=>{try{Neutralino.storage.setData(k.replace(/\W/g,'_'),s).catch(()=>{})}catch(e){}},250)}},
- async deskGet(k){try{const r=await nl(Neutralino.storage.getData(k.replace(/\W/g,'_')));return r?JSON.parse(r):null}catch(e){return null}}};
-// Вызовы движка с тайм-аутом: приложение никогда не зависнет, даже если связь с Neutralino не установится.
+ set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+// Вызовы оболочки с тайм-аутом: интерфейс никогда не зависнет из-за системного окна.
 function nl(p,ms=1500){return Promise.race([Promise.resolve(p).catch(()=>undefined),new Promise(r=>setTimeout(()=>r(undefined),ms))])}
+const TW=()=>window.__TAURI__.window.getCurrentWindow();
 
 /* ================= SETTINGS & STATE ================= */
 // Универсальный режим гунфу: подходит большинству улунов, пуэров, красных и тёмных чаёв.
 const U=[15,15,20,25,30,40,50,60];
-const DEF={accent:'#c4533f',time:'night',weather:'snow',dragon:'pour',fireworks:true,skyl:true,sound:'bell',vol:.65,ticks:true,music:false,mvol:.35,auto:false,all:true,inc:10,rinse:true,rinseSec:5,wake:true,pin:false,fx:matchMedia('(prefers-reduced-motion: reduce)').matches?'lite':'full',lastVer:'',skipVer:''};
+const DEF={accent:'#c4533f',time:'night',weather:'snow',dragon:'pour',fireworks:true,skyl:true,sound:'bell',vol:.65,ticks:true,music:false,mvol:.35,auto:false,all:true,inc:10,rinse:true,rinseSec:5,wake:true,pin:false,fx:matchMedia('(prefers-reduced-motion: reduce)').matches?'lite':'full',lastVer:'',skipVer:'',eco:false};
 let set={...DEF};
 function loadSet(o){set={...DEF,...(o||{})};if(!['pour','never'].includes(set.dragon))set.dragon='pour'}
 loadSet(store.get('chashi.v2.set'));
@@ -810,9 +825,9 @@ function drawTeaTable(){if(W<760)return;const c=g,k=K,base=H,x0=70*k;c.fillStyle
 function drawMist(dt){const c=g;for(const m of MIST){m.x-=m.v*dt;const w=460*m.s;if(m.x<-w)m.x=W+10;c.globalAlpha=P.cloudA*.55;c.drawImage(SPR.cloud,m.x,HZ-34*m.s,w,90*m.s)}c.globalAlpha=1}
 
 /* ---------- frame ---------- */
-let last=performance.now(),tmx=0,pmx=0,lastPtr=-1e9,fpsAcc=0,fpsN=0,fpsBad=0,frameN=0;
-function frame(now){requestAnimationFrame(frame);const ms=Math.min(50,now-last);last=now;frameN++;
- if(anyOpen()&&frameN%2)return; // под открытой панелью сцена рисуется вполовину реже
+let last=performance.now(),tmx=0,pmx=0,lastPtr=-1e9,fpsAcc=0,fpsN=0,fpsBad=0;
+// Экономия: вне фокуса — 24 кадра, под открытой панелью или в эко-режиме — 30, иначе — сколько даёт экран.
+function frame(now){requestAnimationFrame(frame);const gap=document.hasFocus()?(set.eco||anyOpen()?32:0):41;if(now-last<gap-2)return;const ms=Math.min(50,now-last);last=now;
  const dt=ms/16.67,ds=ms/1000;T+=ds;
  if(now-lastPtr>5000)tmx=Math.sin(T*.07)*.35;pmx+=(tmx-pmx)*Math.min(1,.035*dt);
  wind=Math.sin(T*.12)*.55+Math.sin(T*.041)*.35;
@@ -821,7 +836,7 @@ function frame(now){requestAnimationFrame(frame);const ms=Math.min(50,now-last);
  if(started)paintUI();
  autoQuality(performance.now()-t0,ms)}
 // Если кадры стабильно тяжёлые — сам переходит в облегчённый режим.
-function autoQuality(work,ms){if(lite()||document.hidden||!started)return;fpsAcc+=ms;fpsN++;if(fpsN<90)return;const avg=fpsAcc/fpsN;fpsAcc=0;fpsN=0;if(avg>26){if(++fpsBad>=2){set.fx='lite';saveSet();resize();toast('Включил облегчённые эффекты — так будет плавнее')}}else fpsBad=0}
+function autoQuality(work,ms){if(lite()||set.eco||document.hidden||!started||!document.hasFocus())return;fpsAcc+=ms;fpsN++;if(fpsN<90)return;const avg=fpsAcc/fpsN;fpsAcc=0;fpsN=0;if(avg>26){if(++fpsBad>=2){set.fx='lite';saveSet();resize();toast('Включил облегчённые эффекты — так будет плавнее')}}else fpsBad=0}
 function draw(dt,ds){
  const c=g;c.globalAlpha=1;c.globalCompositeOperation='source-over';
  c.drawImage(SPR.sky,0,0,W,HZ+1);
@@ -946,14 +961,20 @@ function summary(){const pours=S.done.filter(d=>d.no>0&&d.s!=null),brew=pours.re
 let rstArm=0;
 function resetSes(){const sum=summary();S=fresh();prepare();saveS();gMax=-1;dragonFor=-1;dragonAt=0;renderAll(true,true);toast(sum||(set.rinse?'Начали сначала — с промывки':'Начали с первого пролива'),sum?4600:2800)}
 
-/* ---------- desktop (Neutralino) ---------- */
-function deskTitle(t){if(DESK)try{Neutralino.window.setTitle(t.replace('茶时 · ','')).catch(()=>{})}catch(e){}}
-function notifyDesk(n){if(!DESK||document.hasFocus())return;try{Neutralino.os.showNotification(n===0?'Промывка готова':'Пролив '+n+' готов',n===0?'Слей воду — дальше первый пролив':'Сливай настой в чахай').catch(()=>{})}catch(e){}}
-function openExt(url){if(DESK){try{Neutralino.os.open(url).catch(()=>{});return}catch(e){}}window.open(url,'_blank','noopener')}
+/* ---------- desktop (Tauri / Rust) ---------- */
+function deskTitle(t){if(!DESK)return;const x=t.replace('茶时 · ','');const el=$('#ttl');if(el)el.textContent=x;try{nl(TW().setTitle(x))}catch(e){}}
+const inv=(cmd,args)=>window.__TAURI__.core.invoke(cmd,args);
+async function notifyDesk(n){if(!DESK||document.hasFocus())return;const title=n===0?'Промывка готова':'Пролив '+n+' готов',body=n===0?'Слей воду — дальше первый пролив':'Сливай настой в чахай';
+ try{const N=window.__TAURI__.notification;if(N){let ok=await nl(N.isPermissionGranted());if(!ok)ok=(await nl(N.requestPermission()))==='granted';if(ok)N.sendNotification({title,body});return}
+  let ok=await nl(inv('plugin:notification|is_permission_granted'));if(!ok)ok=(await nl(inv('plugin:notification|request_permission')))==='granted';if(ok)nl(inv('plugin:notification|notify',{options:{title,body}}))}catch(e){}}
+function openExt(url){if(DESK){try{const O=window.__TAURI__.opener;nl(O?O.openUrl(url):inv('plugin:opener|open_url',{url}));return}catch(e){}}window.open(url,'_blank','noopener')}
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="http"]');if(a&&DESK){e.preventDefault();openExt(a.href)}});
 let miniPrev=null;
-async function setPin(on){set.pin=on;saveSet();if(DESK)try{await nl(Neutralino.window.setAlwaysOnTop(on))}catch(e){}}
-async function toggleMini(){if(!DESK)return;const mini=!document.body.classList.contains('mini');try{if(mini){miniPrev=await nl(Neutralino.window.getSize());await nl(Neutralino.window.setSize({width:420,height:700}));await nl(Neutralino.window.setAlwaysOnTop(true))}else{const p=miniPrev&&miniPrev.width?miniPrev:{width:1280,height:820};await nl(Neutralino.window.setSize({width:p.width,height:p.height}));await nl(Neutralino.window.setAlwaysOnTop(!!set.pin));await nl(Neutralino.window.center())}}catch(e){}document.body.classList.toggle('mini',mini);$('#miniBtn').classList.toggle('on',mini);toast(mini?'Мини-окно поверх всех — удобно заваривать за работой':'Обычное окно')}
+async function setPin(on){set.pin=on;saveSet();if(DESK)try{await nl(TW().setAlwaysOnTop(on))}catch(e){}}
+async function toggleMini(){if(!DESK)return;const mini=!document.body.classList.contains('mini'),w=TW(),LS=(window.__TAURI__.dpi||window.__TAURI__.window).LogicalSize;
+ try{if(mini){const sz=await nl(w.innerSize()),sc=await nl(w.scaleFactor());if(sz&&sc)miniPrev={width:Math.round(sz.width/sc),height:Math.round(sz.height/sc)};await nl(w.setSize(new LS(420,700)));await nl(w.setAlwaysOnTop(true))}
+  else{const p=miniPrev||{width:1280,height:820};await nl(w.setSize(new LS(p.width,p.height)));await nl(w.setAlwaysOnTop(!!set.pin));await nl(w.center())}}catch(e){}
+ document.body.classList.toggle('mini',mini);$('#miniBtn').classList.toggle('on',mini);toast(mini?'Мини-окно поверх всех — удобно заваривать за работой':'Обычное окно')}
 const verNum=v=>String(v||'').replace(/^v/,'').split('.').map(n=>parseInt(n)||0);
 const newer=(a,b)=>{const x=verNum(a),y=verNum(b);for(let i=0;i<3;i++){if((x[i]||0)>(y[i]||0))return true;if((x[i]||0)<(y[i]||0))return false}return false};
 let updInfo=null;
@@ -1024,7 +1045,7 @@ function buildSettings(){$('#setBody').innerHTML=`<div class="dh"><span>Наст
  <section><h3><span class="zh">景</span>Сцена</h3><div class="lbl">Время суток</div>${seg('time',[['night','Ночь'],['dusk','Закат'],['dawn','Предрассвет']])}<div class="lbl">Погода</div>${seg('weather',[['snow','Снег'],['petals','Лепестки'],['rain','Дождь'],['clear','Ясно']])}<p class="note">Нажми на окно — свет включится или погаснет. На небо — запустишь фонарик, на луну — позовёшь дракона, на воду — пойдут круги. На крыше справа живёт кот.</p></section>
  <section><h3><span class="zh">龙</span>События</h3><div class="lbl">Дракон</div>${seg('dragon',[['pour','Раз за пролив'],['never','Не прилетает']])}${tgl('skyl','Небесные фонарики после пролива')}${tgl('fireworks','Фейерверк на каждый 5-й пролив')}<button class="wide" id="callDragon">Призвать дракона сейчас</button></section>
  <section><h3><span class="zh">音</span>Звук</h3><div class="lbl">Сигнал окончания пролива</div>${seg('sound',[['bell','Колокол'],['gong','Гонг'],['muyu','Муюй'],['off','Тишина']])}${sl('vol','Громкость сигнала')}${tgl('ticks','Тиканье в последние 5 секунд')}${tgl('music','Фоновая музыка гучжэна')}${sl('mvol','Громкость музыки')}</section>
- <section><h3><span class="zh">效</span>Эффекты</h3>${seg('fx',[['full','Полные'],['lite','Облегчённые']])}<p class="note">Облегчённый режим бережёт батарею. Если компьютер не справляется, приложение включит его само.</p></section>
+ <section><h3><span class="zh">效</span>Эффекты</h3>${seg('fx',[['full','Полные'],['lite','Облегчённые']])}${tgl('eco','Экономия энергии','не больше 30 кадров в секунду — тише кулер, дольше батарея')}<p class="note">Облегчённый режим бережёт батарею. Если компьютер не справляется, приложение включит его само.</p></section>
  <section><h3><span class="zh">键</span>Горячие клавиши</h3><div class="kbd"><kbd>Пробел</kbd><span>старт / пауза</span><kbd>← →</kbd><span>−5 / +5 секунд</span><kbd>N</kbd><span>пролив готов, следующий</span><kbd>G</kbd><span>гайд по заварке</span><kbd>M</kbd><span>музыка</span><kbd>D</kbd><span>призвать дракона</span><kbd class="deskonly">P</kbd><span class="deskonly">мини-окно</span><kbd>S</kbd><span>настройки</span></div></section>
  <section><h3><span class="zh">人</span>О приложении</h3><div class="about"><div class="am">茶</div><div><b>Ночная чайная</b><small>Создатель — <span style="color:var(--gold);font-weight:800">Ernomoon</span> · версия ${VERSION}</small><small id="updState" class="deskonly"></small></div></div><a class="wide tgbtn" href="${TG}" target="_blank" rel="noopener">${TGSVG}Telegram-канал Ernomoon</a><button class="wide ghost deskonly" id="chkUpd">Проверить обновления</button><button class="wide ghost" id="openGuide2">Мини-гайд по заварке</button><button class="wide ghost" id="toIntro">Вернуться к заставке</button><button class="wide ghost" id="resetSet">Сбросить настройки</button></section>`;syncSettings()}
 function syncSettings(){$$('#setBody .seg').forEach(s=>{const k=s.dataset.k;s.querySelectorAll('button').forEach(b=>b.classList.toggle('on',String(set[k])===b.dataset.v))});$$('#setBody .tg input').forEach(i=>i.checked=!!set[i.dataset.k]);$$('#setBody .rg input').forEach(i=>i.value=set[i.dataset.k]);
@@ -1094,19 +1115,12 @@ setInterval(()=>{if(started&&S.run&&left()<=0)finish(true)},250);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&started){renderAll(false);wake(true)}});
 
 /* ---------- boot ---------- */
-function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
-async function deskInit(){
- if(!/^(127\.0\.0\.1|localhost)$/.test(location.hostname))return false;
- if(!window.Neutralino||window.NL_PORT===undefined){try{if(window.NL_PORT===undefined)await loadScript('/__neutralino_globals.js');if(!window.Neutralino)await loadScript('/js/neutralino.js')}catch(e){}}
- if(!window.Neutralino||window.NL_PORT===undefined)return false;
- try{Neutralino.init();const ok=await nl(Neutralino.app.getConfig(),2500);return !!ok}catch(e){return false}}
 async function boot(){
  applyAccent();
- DESK=await deskInit();
+ DESK=!!(window.__TAURI__&&window.__TAURI__.window);
  if(DESK){document.body.classList.add('desk');
-  const s=await store.deskGet('chashi.v2.set');if(s)loadSet(s);
-  const ses=await store.deskGet('chashi.v2.ses');if(ses){S=fresh();loadSes(ses);restore()}
-  applyAccent();if(set.pin)setPin(true);
+  $('#tbMin').onclick=()=>nl(TW().minimize());$('#tbMax').onclick=()=>nl(TW().toggleMaximize());$('#tbClose').onclick=()=>nl(TW().close());
+  if(set.pin)setPin(true);
   if(set.lastVer&&newer(VERSION,set.lastVer))setTimeout(()=>toast(`Обновлено до версии ${VERSION} ✦`,4000),2500);
   if(set.lastVer!==VERSION){set.lastVer=VERSION;saveSet()}
   setTimeout(()=>checkUpdates(false),5000);setInterval(()=>checkUpdates(false),6*3600*1000)}

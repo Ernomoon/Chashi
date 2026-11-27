@@ -1,7 +1,5 @@
 node_modules/
 dist/
-bin/
-.storage/
-.tmp/
+src-tauri/target/
+src-tauri/gen/
 *.log
-neutralinojs.log
