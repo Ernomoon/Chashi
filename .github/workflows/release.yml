@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'app/**'
+      - 'resources/**'
       - 'build/**'
-      - 'main.js'
+      - 'installer/**'
+      - 'tools/**'
+      - 'neutralino.config.json'
       - 'package.json'
       - 'RELEASE_NOTES.md'
       - '.github/workflows/release.yml'
@@ -21,7 +23,7 @@ concurrency:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,16 +31,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Версия из package.json
+      - name: NSIS
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq nsis
+      - name: Neutralino
+        run: npx neu update
+      - name: Собрать приложение и установщик
+        run: node tools/build.mjs
+      - name: Версия
         id: ver
-        shell: bash
         run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-      - name: Собрать установщик и portable-версию
-        run: npx electron-builder --win --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: Chashi-windows-${{ steps.ver.outputs.v }}
-          path: dist/*.exe
+          path: |
+            dist/Chashi-Setup-*.exe
+            dist/Chashi-Portable-*.exe
       - name: Опубликовать релиз
         uses: softprops/action-gh-release@v2
         with:
@@ -47,4 +54,6 @@ jobs:
           name: Ночная чайная v${{ steps.ver.outputs.v }}
           body_path: RELEASE_NOTES.md
           make_latest: true
-          files: dist/*.exe
+          files: |
+            dist/Chashi-Setup-${{ steps.ver.outputs.v }}.exe
+            dist/Chashi-Portable-${{ steps.ver.outputs.v }}.exe
