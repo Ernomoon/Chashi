@@ -1,0 +1,56 @@
+{
+  "name": "chashi",
+  "productName": "Chashi",
+  "version": "1.0.0",
+  "description": "Ночная чайная — красивый таймер проливов для гунфу ча",
+  "author": "Ernomoon",
+  "license": "MIT",
+  "homepage": "https://t.me/Ernomoon",
+  "repository": "github:Ernomoon/Chashi",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.ernomoon.chashi",
+    "productName": "Chashi",
+    "copyright": "© 2026 Ernomoon",
+    "directories": { "buildResources": "build", "output": "dist" },
+    "files": ["main.js", "app/**/*"],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ночная чайная",
+      "uninstallDisplayName": "Ночная чайная (Chashi)",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/installerSidebar.bmp",
+      "installerHeader": "build/installerHeader.bmp",
+      "license": "build/license_ru.txt",
+      "language": "1049",
+      "installerLanguages": ["ru_RU"],
+      "multiLanguageInstaller": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Chashi-Setup-${version}.${ext}"
+    },
+    "portable": { "artifactName": "Chashi-Portable-${version}.${ext}" }
+  }
+}
